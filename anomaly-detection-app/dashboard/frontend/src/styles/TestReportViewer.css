@@ -1,0 +1,89 @@
+.test-report-viewer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: white;
+  padding: 16px;
+}
+
+.report-header {
+  display: flex;
+  justify-content: flex-end; /* Align buttons to the right */
+  margin-bottom: 16px;
+}
+
+.report-controls {
+  display: flex;
+  gap: 16px; /* Increased gap between buttons */
+}
+
+.action-button {
+  min-width: 140px !important; /* Ensure buttons have enough width */
+  height: 36px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  flex: 1;
+}
+
+.iframe-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: white;
+  min-height: 70vh;
+}
+
+.iframe-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.report-iframe {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.report-iframe.loaded {
+  opacity: 1;
+}
+
+@media (max-width: 600px) {
+  .test-report-viewer {
+    padding: 12px;
+  }
+  
+  .report-controls {
+    width: 100%;
+    justify-content: space-between; /* Space buttons evenly on mobile */
+  }
+  
+  .action-button {
+    flex: 1;
+    max-width: 48%; /* Prevent buttons from getting too wide */
+  }
+  
+  .iframe-container {
+    min-height: 50vh;
+  }
+}

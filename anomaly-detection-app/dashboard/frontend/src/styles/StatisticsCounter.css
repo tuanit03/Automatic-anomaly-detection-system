@@ -1,0 +1,134 @@
+.statistics-counter {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  text-align: center;
+}
+
+.circles-container {
+  display: flex;
+  justify-content: space-around;
+  flex: 1;
+  align-items: center;
+  gap: 1.5rem;
+  margin: 1rem 0;
+}
+
+.stat-circle-container {
+  width: 180px;
+  height: 180px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.3s ease;
+}
+
+.stat-circle-container:hover {
+  transform: scale(1.05);
+}
+
+.stat-circle-progress {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-circle-inner {
+  width: 82%;
+  height: 82%;
+  background-color: #f9f9f9;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease;
+}
+
+.stat-circle-inner:hover {
+  background-color: #ffffff;
+}
+
+.circle-value {
+  font-size: 2.8rem;
+  font-weight: bold;
+  margin-bottom: 0.3rem;
+  transition: color 0.3s ease;
+}
+
+.circle-label {
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.circle-percent {
+  margin-top: 0.25rem;
+  font-size: 1rem;
+  color: #555;
+  font-weight: 500;
+}
+
+.total-events {
+  margin-top: 2rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.connection-error {
+  background-color: #fff3cd;
+  color: #856404;
+  border-left: 4px solid #ffeeba;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .circles-container {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .stat-circle-container {
+    width: 160px;
+    height: 160px;
+  }
+
+  .circle-value {
+    font-size: 2.5rem;
+  }
+  
+  .circle-label {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-circle-container {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .circle-value {
+    font-size: 2.2rem;
+  }
+}
+
+.connection-status {
+  font-size: 0.7rem;
+  color: #999;
+  text-align: center;
+  padding: 0.25rem 1rem;
+  margin-top: 0.5rem;
+}

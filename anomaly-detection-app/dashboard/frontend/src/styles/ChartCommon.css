@@ -1,0 +1,25 @@
+/* Common styling for chart headers across all components */
+.component-title {
+  font-size: 0.95rem !important;
+  margin-bottom: 0.5rem !important;
+  padding: 8px !important;
+  font-weight: 600 !important;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* Additional specific selector overrides for each component */
+.log-header h6,
+.stat-header,
+.anomaly-header h6,
+.chart-header h6 {
+  margin-top: 0 !important;
+}
+
+/* Ensure chart containers have enough space */
+.grid-item {
+  padding-top: 0 !important;
+}

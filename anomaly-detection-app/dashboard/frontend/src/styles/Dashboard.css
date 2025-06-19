@@ -1,0 +1,182 @@
+/* src/styles/Dashboard.css */
+:root {
+  --header-height: 50px; /* Reduced default header height */
+}
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.dashboard-header {
+  background-color: #3f51b5;
+  color: white;
+  padding: 0.5rem 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: auto;
+  min-height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Changed to space-between for layout */
+  z-index: 10;
+}
+
+.dashboard-title {
+  font-weight: bold !important;
+  font-size: 1.25rem !important;  /* Reduce font size */
+  margin: 0 !important;
+}
+
+.view-selector {
+  display: flex;
+  gap: 10px;
+}
+
+.view-button {
+  text-transform: none !important;
+  min-width: 120px !important;
+}
+
+.view-button.active {
+  background-color: white !important;
+  color: #3f51b5 !important;
+  font-weight: 500 !important;
+}
+
+.dashboard-container {
+  padding: 1.5rem !important;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--header-height));
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 1.5rem;
+  height: 100%;
+}
+
+.grid-item {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transition: all 0.3s ease;
+  padding: 0; /* Remove padding to give more space to the chart content */
+  position: relative;
+}
+
+/* Reports view container */
+.reports-view {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  /* No padding or margins here to allow the TestReportViewer to control its own layout */
+}
+
+/* Make sure content fills available space */
+.log-viewer, .statistics-counter, .anomaly-list, .time-series-chart {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.grid-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Grid positioning for the 4 quadrants */
+.quadrant-1 {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+}
+
+.quadrant-2 {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+}
+
+.quadrant-3 {
+  grid-column: 1 / 2;
+  grid-row: 2 / 3;
+}
+
+.quadrant-4 {
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  :root {
+    --header-height: 45px; /* Smaller header on medium screens */
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 1rem;
+  }
+  
+  .quadrant-1, .quadrant-2, .quadrant-3, .quadrant-4 {
+    height: calc((100vh - var(--header-height) - 3rem) / 2); /* Account for padding */
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --header-height: 40px; /* Even smaller header on small screens */
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    padding: 0.75rem 0.5rem;
+    gap: 8px;
+  }
+  
+  .view-button {
+    min-width: 100px !important;
+    padding: 4px 12px !important;
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, 1fr);
+    gap: 1rem;
+  }
+  
+  .quadrant-1 {
+    grid-column: 1;
+    grid-row: 1 / 2;
+  }
+  
+  .quadrant-2 {
+    grid-column: 1;
+    grid-row: 2 / 3;
+  }
+  
+  .quadrant-3 {
+    grid-column: 1;
+    grid-row: 3 / 4;
+  }
+  
+  .quadrant-4 {
+    grid-column: 1;
+    grid-row: 4 / 5;
+  }
+  
+  .quadrant-1, .quadrant-2, .quadrant-3, .quadrant-4 {
+    height: calc((100vh - var(--header-height) - 5rem) / 4); /* Account for padding */
+    min-height: 250px;
+  }
+}

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: anomaly-system
+data:
+  REACT_APP_BACKEND_URL: ""

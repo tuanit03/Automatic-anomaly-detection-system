@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: anomaly-system
+data:
+  DB_HOST: "timescaledb"
+  DB_PORT: "5432"
+  DB_NAME: "anomaly_detection"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092"
+  KAFKA_TOPIC_LOGS: "logs"
+  KAFKA_TOPIC_CLASSIFICATIONS: "classifications"
+  KAFKA_CONSUMER_GROUP: "dashboard-backend"
+  LOG_LEVEL: "INFO"
+  MOCK_DATA_ENABLED: "True"
+  MOCK_DATA_INTERVAL_SECONDS: "5"
+  CORS_ORIGINS: "http://frontend:80,http://localhost:3000,http://frontend.anomaly-system.svc.cluster.local,http://anomaly-detection.local"
+  SLACK_NOTIFICATION_ENABLED: "True"
+  SLACK_NOTIFICATION_INTERVAL_SECONDS: "10"

@@ -1,0 +1,175 @@
+version: '3.8'
+
+networks:
+  anomaly-net:
+    driver: bridge
+
+volumes:
+  kafka1_data:
+  kafka2_data:
+  timescaledb_data:
+
+services:
+  # === KAFKA SERVICES ===
+  kafka1:
+    image: confluentinc/cp-kafka:7.8.0
+    hostname: kafka1
+    container_name: kafka1
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+      - "9096:9096"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_BROKER_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9096,CONTROLLER://kafka1:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka1:9092,EXTERNAL://localhost:9096'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      CLUSTER_ID: 'EmptNWtoR4GGWx-BH6nGLQ'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+    volumes:
+      - kafka1_data:/var/lib/kafka/data
+    networks:
+      - anomaly-net
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  kafka2:
+    image: confluentinc/cp-kafka:7.8.0
+    hostname: kafka2
+    container_name: kafka2
+    ports:
+      - "9094:9092"
+      - "9095:9093"
+      - "9097:9096"
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_BROKER_ID: 2
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9096,CONTROLLER://kafka2:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka2:9092,EXTERNAL://localhost:9097'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      CLUSTER_ID: 'EmptNWtoR4GGWx-BH6nGLQ'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+    volumes:
+      - kafka2_data:/var/lib/kafka/data
+    networks:
+      - anomaly-net
+    depends_on:
+      - kafka1
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-cluster-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka1:9092,kafka2:9092'
+    depends_on:
+      - kafka1
+      - kafka2
+    networks:
+      - anomaly-net
+
+  # === DATABASE ===
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    container_name: timescaledb
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=anomaly_detection
+    volumes:
+      - ./kafka/database/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - anomaly-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  
+  # === BACKEND API ===  
+  backend:
+    build:
+      context: ./dashboard/backend
+      dockerfile: Dockerfile    
+    container_name: anomaly-detection-backend
+    hostname: backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - DB_NAME=anomaly_detection
+      - KAFKA_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9092
+      - KAFKA_TOPIC_LOGS=logs
+      - KAFKA_TOPIC_CLASSIFICATIONS=classifications
+      - KAFKA_CONSUMER_GROUP=dashboard-backend
+      - LOG_LEVEL=INFO
+      - MOCK_DATA_ENABLED=True
+      - MOCK_DATA_INTERVAL_SECONDS=5
+      - CORS_ORIGINS=http://localhost:3000,http://frontend:80,http://localhost,http://localhost:80,http://127.0.0.1:3000
+      - SLACK_BOT_TOKEN=
+      - SLACK_CHANNEL_ID=
+      - SLACK_NOTIFICATION_ENABLED=True
+      - SLACK_NOTIFICATION_INTERVAL_SECONDS=10
+    volumes:
+      - ./dashboard/reports:/app/reports
+    networks:
+      - anomaly-net
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      kafka1:
+        condition: service_started
+      kafka2:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # === FRONTEND UI ===
+  frontend:
+    build:
+      context: ./dashboard/frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_BACKEND_URL=
+    container_name: anomaly-detection-frontend
+    hostname: frontend
+    ports:
+      - "3000:80"  # Map host port 3000 to container port 80 (Nginx)
+    environment:
+      # This is the external URL used at runtime for browsers from outside Docker
+      - REACT_APP_BACKEND_URL=
+    networks:
+      - anomaly-net
+    depends_on:
+      - backend

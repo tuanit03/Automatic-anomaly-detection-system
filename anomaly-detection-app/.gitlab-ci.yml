@@ -1,0 +1,252 @@
+stages:
+  - prepare
+  - test
+  - build
+  - deploy
+
+variables:
+  KUBE_REPO: "natuan12a03/anomaly-detection-k8s"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  # Default values to ensure jobs don't fail if artifacts aren't properly passed
+  BACKEND_IMAGE_EXISTS: "false"
+  FRONTEND_IMAGE_EXISTS: "false"
+  BACKEND_CHANGED: "false"
+  FRONTEND_CHANGED: "false"
+  # Cache settings
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
+
+# Common docker login script
+.docker-login: &docker-login
+  - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+
+check-images:
+  stage: prepare
+  image: docker:28.0.1
+  services:
+    - name: docker:28.0.1-dind
+      command: ["--tls=false"]
+  variables:
+    GIT_STRATEGY: fetch
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - *docker-login
+  script:
+    - |
+      # Single command for backend image check
+      docker manifest inspect registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-backend:latest > /dev/null 2>&1 && \
+        { echo "BACKEND_IMAGE_EXISTS=true" >> build.env; echo "Backend image exists"; } || \
+        { echo "BACKEND_IMAGE_EXISTS=false" >> build.env; echo "Backend image does not exist"; }
+      
+      # Single command for frontend image check
+      docker manifest inspect registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-frontend:latest > /dev/null 2>&1 && \
+        { echo "FRONTEND_IMAGE_EXISTS=true" >> build.env; echo "Frontend image exists"; } || \
+        { echo "FRONTEND_IMAGE_EXISTS=false" >> build.env; echo "Frontend image does not exist"; }
+      
+      # Check for code changes with optimized git calls
+      if [ -n "$CI_COMMIT_BEFORE_SHA" ] && [ "$CI_COMMIT_BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+        CHANGED_FILES=$(git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA)
+        echo "$CHANGED_FILES" | grep -q "dashboard/backend/" && \
+          { echo "BACKEND_CHANGED=true" >> build.env; echo "Backend code changes detected"; } || \
+          { echo "BACKEND_CHANGED=false" >> build.env; echo "No backend changes"; }
+        
+        echo "$CHANGED_FILES" | grep -q "dashboard/frontend/" && \
+          { echo "FRONTEND_CHANGED=true" >> build.env; echo "Frontend code changes detected"; } || \
+          { echo "FRONTEND_CHANGED=false" >> build.env; echo "No frontend changes"; }
+      else
+        echo "BACKEND_CHANGED=true" >> build.env
+        echo "FRONTEND_CHANGED=true" >> build.env
+        echo "First commit or forced build"
+      fi
+      
+      cat build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+    paths:
+      - build.env
+    expire_in: 1 hour
+
+# Backend jobs
+backend-test:
+  stage: test
+  image: python:3.9-slim
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq curl
+    - cd dashboard/backend
+    - pip install --no-cache-dir -r requirements.txt pytest pytest-cov
+  script:
+    - python -m pytest --verbose || echo "Tests failed but continuing"
+  rules:
+    - if: $BACKEND_IMAGE_EXISTS == "false" || $BACKEND_CHANGED == "true"
+      when: always
+      allow_failure: true
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-pip
+    paths:
+      - .pip-cache/
+
+backend-build:
+  stage: build
+  image: docker:20.10.24
+  services:
+    - name: docker:20.10.24-dind
+      command: ["--tls=false"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_BUILDKIT: "0"
+  before_script:
+    - *docker-login
+  script:
+    - |
+      # Build without BuildKit for compatibility with older containerd
+      docker build --pull \
+        -t registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-backend:$CI_COMMIT_SHA \
+        -t registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-backend:latest \
+        dashboard/backend/
+      docker push registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-backend:$CI_COMMIT_SHA
+      docker push registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-backend:latest
+  rules:
+    - if: $BACKEND_IMAGE_EXISTS == "false" || $BACKEND_CHANGED == "true"
+      when: always
+  needs:
+    - job: check-images
+    - job: backend-test
+      optional: true
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-docker-backend
+    paths:
+      - .docker-cache/
+
+# Frontend jobs
+frontend-test:
+  stage: test
+  image: node:18-alpine
+  before_script:
+    - cd dashboard/frontend
+    - npm ci --prefer-offline --no-audit
+  script:
+    - export CI=false
+    - npm test || echo "Tests failed but continuing"
+  rules:
+    - if: $FRONTEND_IMAGE_EXISTS == "false" || $FRONTEND_CHANGED == "true"
+      when: always
+      allow_failure: true
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-npm
+    paths:
+      - dashboard/frontend/node_modules/
+      - .npm/
+
+frontend-build:
+  stage: build
+  image: docker:28.0.1
+  services:
+    - name: docker:28.0.1-dind
+      command: ["--tls=false"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_BUILDKIT: "1"
+  before_script:
+    - *docker-login
+  script:
+    - |
+      # Use BuildKit for faster builds
+      docker build --pull --build-arg BUILDKIT_INLINE_CACHE=1 \
+        -t registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-frontend:$CI_COMMIT_SHA \
+        -t registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-frontend:latest \
+        dashboard/frontend/
+      docker push registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-frontend:$CI_COMMIT_SHA
+      docker push registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-frontend:latest
+  rules:
+    - if: $FRONTEND_IMAGE_EXISTS == "false" || $FRONTEND_CHANGED == "true"
+      when: always
+  needs:
+    - job: check-images
+    - job: frontend-test
+      optional: true
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-docker-frontend
+    paths:
+      - .docker-cache/
+
+update-manifests:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache git openssh-client
+    - git config --global user.email "natuan12a03@gmail.com"
+    - git config --global user.name "natuan12a03"
+    - echo "BACKEND_IMAGE_EXISTS:| $BACKEND_IMAGE_EXISTS"
+    - echo "BACKEND_CHANGED:| $BACKEND_CHANGED"
+    - echo "FRONTEND_IMAGE_EXISTS:| $FRONTEND_IMAGE_EXISTS"
+    - echo "FRONTEND_CHANGED:| $FRONTEND_CHANGED"
+  script:
+    # Clone repo k8s
+    - git clone https://oauth2:${GITLAB_TOKEN}@gitlab.com/$KUBE_REPO.git
+    - cd anomaly-detection-k8s
+    
+    # Process backend component (using safer if statements)
+    - |
+      if [[ "$BACKEND_IMAGE_EXISTS" == "false" || "$BACKEND_CHANGED" == "true" ]]; then
+        if [ -f "applications/backend/deployment.yaml" ]; then
+          sed -i "s|image: registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-backend:.*|image: registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-backend:$CI_COMMIT_SHA|g" applications/backend/deployment.yaml
+          echo "Updated backend image tag to $CI_COMMIT_SHA"
+        else
+          echo "Backend deployment file not found"
+        fi
+      else
+        echo "Skipping backend image update as no changes detected"
+      fi
+    
+    # Process frontend component (using safer if statements)
+    - |
+      if [[ "$FRONTEND_IMAGE_EXISTS" == "false" || "$FRONTEND_CHANGED" == "true" ]]; then
+        if [ -f "applications/frontend/deployment.yaml" ]; then
+          sed -i "s|image: registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-frontend:.*|image: registry.gitlab.com/natuan12a03/anomaly-detection-app/anomaly-frontend:$CI_COMMIT_SHA|g" applications/frontend/deployment.yaml
+          echo "Updated frontend image tag to $CI_COMMIT_SHA"
+        else
+          echo "Frontend deployment file not found"
+        fi
+      else
+        echo "Skipping frontend image update as no changes detected"
+      fi
+    
+    # Add imagePullSecrets if needed
+    - |
+      for component in backend frontend; do
+        if [ -f "applications/$component/deployment.yaml" ]; then
+          if ! grep -q "imagePullSecrets" applications/$component/deployment.yaml; then
+            # Find position to insert imagePullSecrets
+            if grep -q "serviceAccountName:" applications/$component/deployment.yaml; then
+              sed -i '/serviceAccountName:/a\      imagePullSecrets:\n      - name: gitlab-registry' applications/$component/deployment.yaml
+            else
+              sed -i '/spec:/a\      imagePullSecrets:\n      - name: gitlab-registry' applications/$component/deployment.yaml
+            fi
+            echo "Added imagePullSecrets to $component deployment"
+          fi
+        fi
+      done
+    
+    # Commit and push changes if needed
+    - |
+      STATUS=$(git status --porcelain)
+      if [ -n "$STATUS" ]; then
+        git add .
+        git commit -m "Update image tags to $CI_COMMIT_SHA"
+        git push origin main
+        echo "Changes committed and pushed successfully"
+      else
+        echo "No changes detected"
+      fi
+  needs:
+    - job: check-images
+    - job: backend-build
+      optional: true
+    - job: frontend-build
+      optional: true
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"

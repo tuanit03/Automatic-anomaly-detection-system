@@ -1,0 +1,137 @@
+{
+  "test_start_time": "2025-05-19T19:37:42.624776",
+  "test_end_time": "2025-05-19T19:38:05.751481",
+  "total_duration": 23.126705,
+  "base_url": "http://localhost:8000/api",
+  "api_groups": {
+    "logs": {
+      "success": 3,
+      "failed": 0,
+      "endpoints": [
+        {
+          "endpoint": "/api/logs/",
+          "type": "rest",
+          "success": true,
+          "response_time": 0.392810583114624,
+          "result_count": 20
+        },
+        {
+          "endpoint": "/api/logs/",
+          "type": "rest",
+          "params": {
+            "skip": 0,
+            "limit": 5,
+            "log_level": "INFO"
+          },
+          "success": true,
+          "response_time": 0.23977041244506836,
+          "result_count": 5
+        },
+        {
+          "endpoint": "/api/logs/stream",
+          "type": "stream",
+          "success": true,
+          "response_time": 0.0027418136596679688,
+          "total_duration": 5.827211856842041,
+          "events_received": 0
+        }
+      ],
+      "stream_events": 0
+    },
+    "statistics": {
+      "success": 4,
+      "failed": 0,
+      "endpoints": [
+        {
+          "endpoint": "/api/statistics/classifications",
+          "type": "rest",
+          "success": true,
+          "response_time": 0.21640229225158691,
+          "result_count": 9
+        },
+        {
+          "endpoint": "/api/statistics/time-series",
+          "type": "rest",
+          "params": {
+            "interval_minutes": 5,
+            "hours": 1
+          },
+          "success": true,
+          "response_time": 0.23114776611328125,
+          "result_count": 1
+        },
+        {
+          "endpoint": "/api/statistics/summary",
+          "type": "rest",
+          "params": {
+            "hours": 24
+          },
+          "success": true,
+          "response_time": 0.17403769493103027,
+          "result_count": 1
+        },
+        {
+          "endpoint": "/api/statistics/stream",
+          "type": "stream",
+          "success": true,
+          "response_time": 0.010576963424682617,
+          "total_duration": 8.446196794509888,
+          "events_received": 0
+        }
+      ],
+      "stream_events": 0
+    },
+    "anomalies": {
+      "success": 4,
+      "failed": 0,
+      "endpoints": [
+        {
+          "endpoint": "/api/anomalies/",
+          "type": "rest",
+          "success": true,
+          "response_time": 0.17357969284057617,
+          "result_count": 52
+        },
+        {
+          "endpoint": "/api/anomalies/recent",
+          "type": "rest",
+          "params": {
+            "hours": 24,
+            "limit": 5
+          },
+          "success": true,
+          "response_time": 0.31236743927001953,
+          "result_count": 5
+        },
+        {
+          "endpoint": "/api/anomalies/unidentified",
+          "type": "rest",
+          "params": {
+            "hours": 24,
+            "limit": 5
+          },
+          "success": true,
+          "response_time": 0.46622490882873535,
+          "result_count": 5
+        },
+        {
+          "endpoint": "/api/anomalies/stream",
+          "type": "stream",
+          "success": true,
+          "response_time": 0.005050182342529297,
+          "total_duration": 6.6392152309417725,
+          "events_received": 0
+        }
+      ],
+      "stream_events": 0
+    }
+  },
+  "summary": {
+    "total_endpoints": 11,
+    "successful_endpoints": 11,
+    "failed_endpoints": 0,
+    "success_rate": 100.0,
+    "average_response_time": 0.27579259872436523,
+    "total_stream_events": 0
+  }
+}

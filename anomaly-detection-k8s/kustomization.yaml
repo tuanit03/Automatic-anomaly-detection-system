@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespaces/anomaly-system.yaml
+  - applications/timescaledb/persistent-volume.yaml
+  - applications/timescaledb/configmap.yaml
+  - applications/timescaledb/secret.yaml
+  - applications/timescaledb/deployment.yaml
+  - applications/timescaledb/service.yaml
+  - applications/kafka/persistent-volume.yaml
+  - applications/kafka/kafka1-deployment.yaml
+  - applications/kafka/kafka2-deployment.yaml
+  - applications/kafka/kafka-service.yaml
+  - applications/kafka/kafka-ui-deployment.yaml
+  - applications/kafka/kafka-ui-service.yaml
+  - applications/kafka/kafka-ui-ingress.yaml
+  - applications/backend/configmap.yaml
+  - applications/backend/secrets.yaml
+  - applications/backend/deployment.yaml
+  - applications/backend/service.yaml
+  - applications/frontend/configmap.yaml
+  - applications/frontend/deployment.yaml
+  - applications/frontend/service.yaml
+  - applications/frontend/ingress.yaml
